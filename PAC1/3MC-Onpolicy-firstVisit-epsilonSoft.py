@@ -170,4 +170,4 @@ def execute_episode(Q, env):
     # Disply total reward
     print(f"\nTotal return for the episode: {total_reward}")
 
-execute_episode(Q,env)
+execute_episode(Q_mc,env)
