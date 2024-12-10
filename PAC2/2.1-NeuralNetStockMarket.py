@@ -25,13 +25,13 @@ class NeuralNetStockMarket(torch.nn.Module):
         ## Construcció de la xarxa neuronal
         #construir el model Seqüencial
         self.model = nn.Sequential(
-            nn.Linear(self.n_inputs, 256, bias=True),
+            nn.Linear(self.n_inputs, 256, bias=True), #primera capa - 256 neurones
             nn.ReLU(),
-            nn.Linear(256, 128, bias=True),
+            nn.Linear(256, 128, bias=True), #segona capa - 128 neurones
             nn.ReLU(),
-            nn.Linear(128, 64, bias=True),
+            nn.Linear(128, 64, bias=True), #tercera capa - 64 neurones
             nn.ReLU(),
-            nn.Linear(64, self.n_outputs, bias=True)
+            nn.Linear(64, self.n_outputs, bias=True) #capa de sortida
         ).to(self.device)
 
         #######################################
