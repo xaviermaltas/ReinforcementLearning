@@ -74,6 +74,13 @@ class StockMarketEnv(gym.Env):
         return float(normalized_value)
 
     def _next_observation(self):
+        if self.current_step >= self.n_steps:
+            return self._normalize(self.prices[-1], self.min_price, self.max_price), \
+                   self._normalize(self.balance, self.initial_balance * 0.85, self.initial_balance * 1.25), \
+                   self._normalize(self.shares_held, 0, self.initial_balance / self.prices[-1]), \
+                   self._normalize(self.rsi[-1], self.min_rsi, self.max_rsi), \
+                   self._normalize(self.ema[-1], self.min_ema, self.max_ema)
+        
         # Normalitzem els valors
         norm_price = self._normalize(self.prices[self.current_step], self.min_price, self.max_price)
         norm_balance = self._normalize(self.balance, self.initial_balance * 0.85, self.initial_balance * 1.25)
@@ -86,6 +93,11 @@ class StockMarketEnv(gym.Env):
 
     def step(self, action):
         """Execute one time step within the environment."""
+        if self.current_step >= self.n_steps:
+            terminated = True
+            truncated = True
+            return self._next_observation(), 0, terminated, truncated, {}
+
         current_price = self.prices[self.current_step]
         reward = 0
 
@@ -107,7 +119,7 @@ class StockMarketEnv(gym.Env):
 
         # Avançar al següent pas
         self.current_step += 1
-        terminated = self.net_worth < (0.85 * self.initial_balance)
+        terminated = self.net_worth < (0.85 * self.initial_balance) or self.current_step >= self.n_steps
         truncated = self.current_step >= self.n_steps
 
         if self.save_to_csv:
@@ -115,6 +127,7 @@ class StockMarketEnv(gym.Env):
 
         # Retorna l'observació, la recompensa, si està complet, i altra informació addicional
         return self._next_observation(), reward, terminated, truncated, {}
+
 
     def _calculate_reward(self):
         reward = 0
