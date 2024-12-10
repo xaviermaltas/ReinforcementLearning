@@ -34,7 +34,7 @@ print(f"REWARD_THRESHOLD calculat: {REWARD_THRESHOLD}")
 
 # Importar les llibreries necessàries
 import torch
-import torch.nn as nn  # Assegura't que aquest mòdul estigui importat
+import torch.nn as nn
 from datetime import datetime
 
 # Crear l'entorn i l'agent
