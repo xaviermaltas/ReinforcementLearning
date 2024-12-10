@@ -75,11 +75,13 @@ class StockMarketEnv(gym.Env):
 
     def _next_observation(self):
         if self.current_step >= self.n_steps:
-            return self._normalize(self.prices[-1], self.min_price, self.max_price), \
-                   self._normalize(self.balance, self.initial_balance * 0.85, self.initial_balance * 1.25), \
-                   self._normalize(self.shares_held, 0, self.initial_balance / self.prices[-1]), \
-                   self._normalize(self.rsi[-1], self.min_rsi, self.max_rsi), \
-                   self._normalize(self.ema[-1], self.min_ema, self.max_ema)
+            return np.array([
+                self._normalize(self.prices[-1], self.min_price, self.max_price),
+                self._normalize(self.balance, self.initial_balance * 0.85, self.initial_balance * 1.25),
+                self._normalize(self.shares_held, 0, self.initial_balance / self.prices[-1]),
+                self._normalize(self.rsi[-1], self.min_rsi, self.max_rsi),
+                self._normalize(self.ema[-1], self.min_ema, self.max_ema)
+            ])
         
         # Normalitzem els valors
         norm_price = self._normalize(self.prices[self.current_step], self.min_price, self.max_price)
