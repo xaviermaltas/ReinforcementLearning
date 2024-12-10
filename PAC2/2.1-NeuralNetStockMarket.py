@@ -11,19 +11,28 @@ class NeuralNetStockMarket(torch.nn.Module):
         actions: array d'accions possibles
         """
         ######################################
-        ## TODO: Inicialitzar paràmetres
+        ##Inicialitzar paràmetres
         super(NeuralNetStockMarket, self).__init__()
-        self.n_inputs = None  # TODO: assignar la mida de l'espai d'estats
-        self.n_outputs = None  # TODO: assignar la mida de l'espai d'accions
-        self.actions = None  # TODO: assignar l'array d'accions possibles
-        self.learning_rate = None  # TODO: assignar el valor de la taxa d'aprenentatge
+        self.n_inputs = env.observation_space.shape[0]  #assignar la mida de l'espai d'estats
+        self.n_outputs = env.action_space.n  #assignar la mida de l'espai d'accions
+        self.actions = list(range(self.n_outputs))  #assignar l'array d'accions possibles
+        self.learning_rate = learning_rate  #assignar el valor de la taxa d'aprenentatge
 
         # Definir el dispositiu (CPU o GPU)
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         #######################################
         ## Construcció de la xarxa neuronal
-        self.model = None  # TODO: construir el model Seqüencial aquí
+        #construir el model Seqüencial
+        self.model = nn.Sequential(
+            nn.Linear(self.n_inputs, 256, bias=True),
+            nn.ReLU(),
+            nn.Linear(256, 128, bias=True),
+            nn.ReLU(),
+            nn.Linear(128, 64, bias=True),
+            nn.ReLU(),
+            nn.Linear(64, self.n_outputs, bias=True)
+        ).to(self.device)
 
         #######################################
         ## Inicialitzar l'optimitzador
@@ -35,9 +44,11 @@ class NeuralNetStockMarket(torch.nn.Module):
     ### Mètode e-greedy
     def get_action(self, state, epsilon=0.05):
         if np.random.random() < epsilon:
-            action = None  # TODO: acció aleatòria
+            #random action (exploració)
+            action = np.random.choice(self.actions)
         else:
-            qvals = None  # TODO: calcular el valor de Q per a l'estat
+            #action based on qvalues
+            qvals = self.get_qvals(state)
             action = torch.max(qvals, dim=-1)[1].item()
         return action
 
