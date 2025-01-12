@@ -1,7 +1,12 @@
-X_THRESHOLD = env.unwrapped.x_threshold*1.25 #Limit de posicio del carro
+import numpy as np
+import matplotlib.pylab as pltX_THRESHOLD = env.unwrapped.x_threshold*1.25 #Limit de posicio del carro
 ANGLE_THRESHOLD = env.unwrapped.theta_threshold_radians*1.25 #Limit de l'angle del pal
 def analyze_results(observations, rewards):
     for step_idx, step in enumerate(observations):
+
+        num_cases = len(observations)  # Nombre de casuístiques
+        fig, axs = plt.subplots(3, 3, figsize=(18, 12))  # Subplots de 3x3
+
         #Extract positions, angles and actions
         positions = [obs[0][0] for obs in step] #relative position to the target
         angles = [obs[0][2] for obs in step] #pole angles
