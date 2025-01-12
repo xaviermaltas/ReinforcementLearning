@@ -99,7 +99,7 @@ class CartPoleEnvRandomTarget(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.target_desire_factor = min(
             max(target_desire_factor, 0), 1
         )  # between 0 and 1
-        if reward_function in ["default", "custom"]:
+        if reward_function in ["default", "custom", "custom1", "custom2"]:
             self.reward_function = reward_function
         else:
             raise AttributeError("reward function must be either default or custom")
@@ -139,19 +139,36 @@ class CartPoleEnvRandomTarget(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         if self.reward_function == "default":
             #Reward default del cartpole
             return 1 if not terminated else 0
-        else:
-            angle_reward = (
-                -abs(angle) / (2.0 * self.x_threshold) / self.theta_threshold_radians
-            )
-            target_reward = -(abs(target_position - current_position) ** 2) / (
-                (2 * self.x_threshold) ** 2
-            )
-            return (
-                1
-                + self.target_desire_factor * target_reward
-                + (1 - self.target_desire_factor) * angle_reward
-            )
+        elif self.reward_function == "custom":
+            angle_reward = ( -abs(angle) / (2.0 * self.x_threshold) / self.theta_threshold_radians )
+            target_reward = -(abs(target_position - current_position) ** 2) / ((2 * self.x_threshold) ** 2)
+            return ( 1 + self.target_desire_factor * target_reward + (1 - self.target_desire_factor) * angle_reward )
         #TODO 2.2: Implementar 2 funcions de reward extra
+
+        elif self.reward_function == "custom1":
+            #Custom Reward 1: Recompensa basada en la distància entre la posició del carret i el target
+            #Penalitza més l'angle i premia si la posició del carret és a prop del target
+            angle_penalty = abs(angle) / self.theta_threshold_radians
+            distance_to_target = abs(target_position - current_position)
+            target_reward = 1 - (distance_to_target / self.x_threshold) ** 2
+            return max(0, target_reward - angle_penalty)
+        elif self.reward_function == "custom2":
+            #Custom Reward 2: Recompensa per llindar
+            #Penalització de l'angle
+            angle_penalty = abs(angle) / self.theta_threshold_radians
+            #Distància al target
+            distance_to_target = abs(target_position - current_position)
+            #Penalització contínua de la distància (inspirada en custom1)
+            target_reward = 1 - (distance_to_target / self.x_threshold) ** 2
+            #Llindar per recompensa extra
+            distance_threshold = 0.2  # Llindar de 0.2 unitats al voltant del target
+            if distance_to_target <= distance_threshold:
+                target_reward += 0.5  # Bonificació si és prou a prop del target
+            # Combinació de les components
+            return max(0, target_reward - angle_penalty)
+
+        else:
+            raise AttributeError("Invalid reward function specified")
 
     def step(self, action):
         assert self.action_space.contains(
