@@ -75,7 +75,7 @@ class CartPoleEnvRandomTarget(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         self.increased_actions = increased_actions
         if self.increased_actions:
             #TODO 3.1: Ampliar l'espai d'observacions
-            raise NotImplementedError("Increased actions should be implemented")
+            self.action_space = spaces.Discrete(6)
         else:
             self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Box(-high, high, dtype=np.float32)
@@ -177,12 +177,14 @@ class CartPoleEnvRandomTarget(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         assert self.state is not None, "Call reset before using step method."
         x, x_dot, theta, theta_dot, _ = self.state
         if self.increased_actions:
-            force_factor = action - 3
-            force = (
-                force_factor / 3 * self.force_mag
-                if force_factor > 0
-                else (force_factor - 1) / 3 * self.force_mag
-            )
+            # Accions negatives (0, 1, 2)
+            if action in [0, 1, 2]:  
+                force_multipliers = [1.0, 0.66, 0.33]
+                force = -force_multipliers[action] * self.force_mag
+            # Accions positives (3, 4, 5)
+            elif action in [3, 4, 5]:  
+                force_multipliers = [1.0, 0.66, 0.33]
+                force = force_multipliers[action - 3] * self.force_mag
         else:
             force = self.force_mag if action == 1 else -self.force_mag
         costheta = np.cos(theta)
