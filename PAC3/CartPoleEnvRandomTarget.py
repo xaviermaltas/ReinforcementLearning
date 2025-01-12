@@ -93,6 +93,7 @@ class CartPoleEnvRandomTarget(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
         #TODO 1.3: Tenir en compte si l'entorn és d'avaluació
         self.is_eval = is_eval
+        self.target_position_index = None #index to control target position
         self.target_position = self.generate_random_target_position()
 
         self.target_desire_factor = min(
@@ -108,7 +109,28 @@ class CartPoleEnvRandomTarget(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     ):
         if self.is_eval:
             #TODO 1.3:Tingueu en compte si l'entorn és d'avaluació per situar el target en unes posicions concretes.
-            raise NotImplementedError("You should implement is_eval casuistic")
+            #preset target positions for evaluation mode
+            eval_positions = [
+                -self.x_threshold,                      # Extrem esquerre
+                -self.x_threshold * 0.75,               # 3/4 esquerre
+                -self.x_threshold * 0.5,                # 1/2 esquerre
+                -self.x_threshold * 0.25,               # 1/4 esquerre
+                0.0,                                    # Centre
+                self.x_threshold * 0.25,                # 1/4 dret
+                self.x_threshold * 0.5,                 # 1/2 dret
+                self.x_threshold * 0.75,                # 3/4 dret
+                self.x_threshold                        # Extrem dret
+            ]
+            #select a random position (first execution)
+            if self.target_position_index is None:
+                self.target_position_index = np.random.randint(0,9)
+
+            #select the target position based on the index
+            target_position = eval_positions[self.target_position_index]
+
+            #update the index
+            self.target_position_index = (self.target_position_index + 1) % 9
+            
             return target_position
         else:
             return np.random.uniform(-self.x_threshold, self.x_threshold)
