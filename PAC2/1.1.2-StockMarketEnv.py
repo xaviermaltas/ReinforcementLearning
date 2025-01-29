@@ -24,7 +24,7 @@ class StockMarketEnv(gym.Env):
         self.balance = float(initial_balance)
         self.shares_held = 0
         self.net_worth = initial_balance
-        self.previus_net_worth = initial_balance
+        self.previous_net_worth = initial_balance
 
         # Espai d'accions: 0 -> mantenir, 1 -> comprar, 2 -> vendre
         self.action_space = Discrete(3)
@@ -63,7 +63,7 @@ class StockMarketEnv(gym.Env):
         self.balance = self.initial_balance
         self.shares_held = 0
         self.net_worth = self.initial_balance
-        self.previus_net_worth = self.initial_balance
+        self.previous_net_worth = self.initial_balance
         return self._next_observation(), {}
 
     def _normalize(self, value, min_val, max_val):
@@ -97,7 +97,7 @@ class StockMarketEnv(gym.Env):
         """Execute one time step within the environment."""
         if self.current_step >= self.n_steps:
             terminated = True
-            truncated = True
+            truncated = False
             return self._next_observation(), 0, terminated, truncated, {}
 
         current_price = self.prices[self.current_step]
@@ -105,15 +105,15 @@ class StockMarketEnv(gym.Env):
 
         # Acció: 0 -> mantenir, 1 -> comprar, 2 -> vendre
         if action == 1:  # Buy
-            shares_bought = self.balance // current_price
+            shares_bought = int(self.balance // current_price)
             self.balance = float(self.balance - shares_bought * current_price)
-            self.shares_held += shares_bought
+            self.shares_held = int(self.shares_held + shares_bought)
         elif action == 2:  # Sell
             self.balance = float(self.balance + self.shares_held * current_price)
             self.shares_held = 0
 
         # Actualitzar el preu anterior
-        self.previus_net_worth = self.net_worth
+        self.previous_net_worth = self.net_worth
         self.net_worth = float(self.balance + (self.shares_held * current_price))
 
         # Calcular la recompensa
@@ -121,7 +121,7 @@ class StockMarketEnv(gym.Env):
 
         # Avançar al següent pas
         self.current_step += 1
-        terminated = self.net_worth < (0.85 * self.initial_balance) or self.current_step >= self.n_steps
+        terminated = self.net_worth < (0.85 * self.initial_balance)
         truncated = self.current_step >= self.n_steps
 
         if self.save_to_csv:
@@ -129,7 +129,6 @@ class StockMarketEnv(gym.Env):
 
         # Retorna l'observació, la recompensa, si està complet, i altra informació addicional
         return self._next_observation(), reward, terminated, truncated, {}
-
 
     def _calculate_reward(self):
         reward = 0
@@ -141,17 +140,17 @@ class StockMarketEnv(gym.Env):
         previous_price = self.prices[self.current_step - 1]
 
         # net worth increased
-        if self.net_worth > self.previus_net_worth:
+        if self.net_worth > self.previous_net_worth:
             return 1
         # net worth decreased
-        if self.net_worth < self.previus_net_worth:
+        if self.net_worth < self.previous_net_worth:
             return -1
-        if self.net_worth == self.previus_net_worth:
+        if self.net_worth == self.previous_net_worth:
             # shares worth less than before
-            if self.shares_held > 0 and current_price > previous_price:
+            if self.shares_held == 0 and current_price < previous_price:
                 return 1
             # shares worth more than before
-            if self.shares_held > 0 and current_price < previous_price:
+            if self.shares_held == 0 and current_price > previous_price:
                 return -1
         return reward
 
@@ -169,4 +168,4 @@ class StockMarketEnv(gym.Env):
         profit = self.net_worth - self.initial_balance
         with open(self.csv_filename, mode='a', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow([self.current_step, self.balance, self.shares_held, self.net_worth, profit])
+            writer.writerow([self.current_step, self.balance, int(self.shares_held), self.net_worth, profit])
