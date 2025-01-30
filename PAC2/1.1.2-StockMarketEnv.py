@@ -74,24 +74,21 @@ class StockMarketEnv(gym.Env):
         return float(normalized_value)
 
     def _next_observation(self):
-        if self.current_step >= self.n_steps:
-            return np.array([
-                self._normalize(self.prices[-1], self.min_price, self.max_price),
-                self._normalize(self.balance, self.initial_balance * 0.85, self.initial_balance * 1.25),
-                self._normalize(self.shares_held, 0, self.initial_balance / self.prices[-1]),
-                self._normalize(self.rsi[-1], self.min_rsi, self.max_rsi),
-                self._normalize(self.ema[-1], self.min_ema, self.max_ema)
-            ])
-        
-        # Normalitzem els valors
+        #  Normalitzem els valors
         norm_price = self._normalize(self.prices[self.current_step], self.min_price, self.max_price)
         norm_balance = self._normalize(self.balance, self.initial_balance * 0.85, self.initial_balance * 1.25)
-        max_shares = self.initial_balance / self.prices[self.current_step]
-        norm_shares_held = self._normalize(self.shares_held, 0, max_shares)
+        norm_shares_held = self._normalize(self.shares_held, 0, 100)  # Màxim de 100 accions
         norm_rsi = self._normalize(self.rsi[self.current_step], self.min_rsi, self.max_rsi)
         norm_ema = self._normalize(self.ema[self.current_step], self.min_ema, self.max_ema)
 
-        return np.array([norm_price, norm_balance, norm_shares_held, norm_rsi, norm_ema])
+        return np.array([
+            norm_price,
+            norm_balance,
+            norm_shares_held,
+            norm_rsi,
+            norm_ema,
+        ])
+
 
     def step(self, action):
         """Execute one time step within the environment."""
