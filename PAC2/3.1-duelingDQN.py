@@ -17,9 +17,9 @@ class duelingDQN(torch.nn.Module):
         super(duelingDQN, self).__init__()
         self.device = device if device else ('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.n_inputs = #TODO
-        self.n_outputs = #TODO
-        self.actions = #TODO
+        self.n_inputs = env.observation_space.shape[0]
+        self.n_outputs = env.action_space.n
+        self.actions = list(range(self.n_outputs))
 
         ######
 
@@ -28,41 +28,54 @@ class duelingDQN(torch.nn.Module):
         # Xarxa comuna
         ## Construcció de la xarxa neuronal
 
-        self.model_common = #TODO
+        #xarxa comuna
+        self.model_common = nn.Sequential(
+            nn.Linear(self.n_inputs, 256, bias=True),
+            nn.ReLU(),
+            nn.Linear(256, 128, bias=True),
+            nn.ReLU()
+        )
 
         # Subxarxa de la funció de Valor
         self.fc_layer_inputs = self.feature_size()
 
 
-        self.advantage  = #TODO
-
-        # Recordeu adaptar-les a CPU o GPU
-
-        # Subxarxa de l'Avantatge A(s,a)
-        self.value = #TODO
+        # Subxarxa d'avantatge (A(s,a))
+        self.advantage = nn.Sequential(
+            nn.Linear(128, 64, bias=True),
+            nn.ReLU(),
+            nn.Linear(64, self.n_outputs, bias=True)
+        )
+        
+        # Subxarxa de valor (V(s))
+        self.value = nn.Sequential(
+            nn.Linear(128, 64, bias=True),
+            nn.ReLU(),
+            nn.Linear(64, 1, bias=True),
+        )
 
         #######
         #######################################
         ## TODO: Inicialitzar l'optimitzador
-        self.optimizer = #TODO
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
 
 
     #######################################
     ##### TODO: Funció forward #############
     def forward(self, state):
         # Connexió entre capes de la xarxa comuna
-        common_out = #TODO
+        common_out = self.model_common(state)
 
         # Connexió entre capes de la Subxarxa de Valor
-        advantage = #TODO
+        advantage = self.advantage(common_out)
 
         # Connexió entre capes de la Subxarxa d'Avantatge
-        value = #TODO
+        value = self.value(common_out)
 
 
         ## Agregar les dues subxarxes:
         # Q(s,a) = V(s) + (A(s,a) - 1/|A| * sum A(s,a'))
-        action = #TODO
+        action = q_values = value + (advantage - advantage.mean(dim=1, keepdim=True))
 
         return action
     #######
