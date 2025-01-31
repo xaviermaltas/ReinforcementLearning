@@ -21,7 +21,7 @@ class DQNAgent:
     def initialize(self):
         ######################################
         ## TODO 3: Inicialitzar el necessari
-        self.state0 = None  # Estat inicial
+        self.state0 = self.env.reset()[0]  # Estat inicial
         self.update_loss = []
         self.total_reward = 0  # Recompensa total d'un episodi
         self.step_count = 0  # Comptador de passos
@@ -46,16 +46,18 @@ class DQNAgent:
         # TODO: prendre un 'step', obtenir un nou estat i recompensa. Desar l'experiència al buffer
 
         next_state, reward, done, truncated, _ = self.env.step(action)
-        self.total_reward += reward
+        current_state = np.array(self.state0, dtype=np.float32)
+        next_state = np.array(next_state, dtype=np.float32)
         
-        self.buffer.append(self.state0, action, reward, done, next_state)
+        self.buffer.append(current_state, action, reward, done, next_state)
+        self.total_reward += reward
         
         # TODO: reiniciar l'entorn si s'ha completat l'episodi ('if done')
         if done or truncated:
-            self.state0 = self.env.reset()#[0]
+            self.state0 = np.array(self.env.reset()[0], dtype=np.float32)
             return True
         else:
-            self.state0 = next_state
+            self.state0 = next_state.copy()
             return False
 
     ## Entrenament
@@ -69,6 +71,8 @@ class DQNAgent:
         # Omplir el buffer amb N experiències aleatòries (burn-in)
         print("Omplint el buffer de repetició d'experiències...")
         while self.buffer.burn_in_capacity() < 1:
+            if not isinstance(self.state0, np.ndarray):
+                self.state0 = np.array(self.env.reset()[0], dtype=np.float32)
             self.take_step(self.epsilon, mode='explore')
 
         episode = 0
@@ -124,7 +128,7 @@ class DQNAgent:
                     #################################################################################
                     ###### TODO 9: Actualitzar epsilon segons la velocitat de decaïment fixada ########
                     self.epsilon = max(self.epsilon * self.eps_decay, 0.01)
-                    self.epsilon_history.append(self.epsilon)
+                    self.episode_epsilon.append(self.epsilon)
 
     ## Càlcul de la pèrdua
     def calculate_loss(self, batch):
