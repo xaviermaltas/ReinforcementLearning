@@ -1,5 +1,4 @@
 class duelingDQNAgent:
-
     def __init__(self, env, main_network, buffer, reward_threshold, epsilon=0.1, eps_decay=0.99, batch_size=32, device=None):
         """""
         Paràmetres
@@ -16,48 +15,55 @@ class duelingDQNAgent:
         """
         self.device = device if device else ('cuda' if torch.cuda.is_available() else 'cpu')
         ###############################################################
-        ##### TODO 1: inicialitzar variables ######
-        self.env = None  # TODO
-        self.main_network = None  # TODO
-        self.target_network = None  # TODO Xarxa objectiu (còpia de la principal)
-        self.buffer = None  # TODO
-        self.epsilon = None  # TODO
-        self.eps_decay = None  # TODO
-        self.batch_size = None  # TODO
-        self.nblock = None  # TODO Bloc dels X últims episodis dels quals es calcularà la mitjana de recompensa
-        self.reward_threshold = reward_threshold  # Llindar de recompensa definit en l'entorn
-
+        # Inicialització de variables
+        self.env = env
+        self.main_network = main_network
+        self.target_network = copy.deepcopy(main_network)
+        self.buffer = buffer
+        self.epsilon = epsilon
+        self.eps_decay = eps_decay
+        self.batch_size = batch_size
+        self.nblock = 100
+        self.reward_threshold = reward_threshold
         self.initialize()
 
-    ###############################################################
-    ##### TODO 2: inicialitzar variables extres que es necessiten ######
     def initialize(self):
-        pass
-        # TODO
+        # Variables d'estat i seguiment
+        self.state0 = self.env.reset()[0]
+        self.total_reward = 0
+        self.step_count = 0
+        self.rewards_history = []
+        self.mean_rewards_history = []
+        self.episode_epsilon = []
+        self.update_loss = []
 
-    #################################################################################
-    ###### TODO 3: Prendre nova acció ###############################################
     def take_step(self, eps, mode='train'):
         if mode == 'explore':
-            action = None  # TODO Acció aleatòria durant el burn-in
+            action = self.env.action_space.sample()
         else:
-           action = None  # TODO Acció basada en el valor de Q (elecció de l'acció amb millor Q)
-           self.step_count += 1
+            qvals = self.main_network.get_qvals(self.state0)
+            action = torch.max(qvals, dim=-1)[1].item()
+            self.step_count += 1
 
-        # TODO: Realització de l'acció i obtenció del nou estat i la recompensa
+        next_state, reward, done, truncated, _ = self.env.step(action)
+        self.total_reward += reward
 
-        # TODO: reiniciar entorn 'if done'
-        if done:
-            pass  # TODO
-        return done
+        self.buffer.append(self.state0, action, reward, done, next_state)
 
-    ## Entrenament
+        if done or truncated:
+            self.state0 = self.env.reset()[0]
+            return True
+        else:
+            self.state0 = next_state
+            return False
+
     def train(self, gamma=0.99, max_episodes=50000,
               batch_size=32,
               dnn_update_frequency=4,
               dnn_sync_frequency=2000, min_episodios=250):
         self.gamma = gamma
-        # Omplim el buffer amb N experiències aleatòries
+
+        # Fase de burn-in
         print("Omplint el buffer de repetició d'experiències...")
         while self.buffer.burn_in_capacity() < 1:
             self.take_step(self.epsilon, mode='explore')
@@ -70,27 +76,30 @@ class duelingDQNAgent:
             self.total_reward = 0
             gamedone = False
             while not gamedone:
-                # L'agent pren una acció
                 gamedone = self.take_step(self.epsilon, mode='train')
 
-                #################################################################################
-                ##### TODO 4: Actualitzar la xarxa principal segons la freqüència establerta #######
+                ##### Actualitzar la xarxa principal segons la freqüència establerta #######
+                if self.step_count % dnn_update_frequency == 0 and len(self.buffer.replay_memory) >= self.batch_size:
+                    self.update()
 
-                ########################################################################################
-                ### TODO 6: Sincronitzar xarxa principal i xarxa objectiu segons la freqüència establerta #####
+                # Sincronització de xarxes
+                if self.step_count % dnn_sync_frequency == 0:
+                    self.target_network.load_state_dict(self.main_network.state_dict())
 
                 if gamedone:
                     episode += 1
                     ##################################################################
-                    ######## TODO: Emmagatzemar epsilon, training rewards i loss #######
+                    ########Emmagatzemar epsilon, training rewards i loss #######
 
                     ####
                     self.update_loss = []
+                    # Emmagatzemar mètriques
+                    self.rewards_history.append(self.total_reward)
+                    self.episode_epsilon.append(self.epsilon)
 
-                    #######################################################################################
-                    ### TODO 7: Calcular la mitjana de recompensa dels últims X episodis i emmagatzemar #####
-                    mean_rewards = None
-                    ###
+                    # Calcular mitjana mòbil
+                    mean_rewards = np.mean(self.rewards_history[-self.nblock:]) if len(self.rewards_history) >= self.nblock else np.mean(self.rewards_history)
+                    self.mean_rewards_history.append(mean_rewards)
 
                     print("\rEpisodi {:d} Recompenses Mitjanes {:.2f} Epsilon {}\t\t".format(
                         episode, mean_rewards, self.epsilon), end="")
@@ -102,14 +111,13 @@ class duelingDQNAgent:
                         break
 
                     # Finalitza si la mitjana de recompenses arriba al llindar fixat
-                    if mean_rewards >= self.reward_threshold and min_episodios < episode:
+                    if mean_rewards >= self.reward_threshold and episode >= min_episodios:
                         training = False
                         print('\nEntorn resolt en {} episodis!'.format(episode))
                         break
 
-                    #################################################################################
-                    ###### TODO 8: Actualitzar epsilon ########
-                    self.epsilon = None
+                    # Actualització d'epsilon
+                    self.epsilon = max(self.epsilon * self.eps_decay, 0.01)
 
     ## Càlcul de la pèrdua
     def calculate_loss(self, batch):
